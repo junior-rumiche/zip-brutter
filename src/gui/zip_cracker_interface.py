@@ -247,9 +247,9 @@ class ZipCrackerInterface(QWidget):
         self.stop_btn.clicked.connect(self.stop_attack)
         self.length_slider.valueChanged.connect(self._on_slider_changed)
         self.dict_path.textChanged.connect(self._on_dict_path_changed)
-        self.numbers_switch.toggled.connect(self._on_brute_force_option_changed)
-        self.letters_switch.toggled.connect(self._on_brute_force_option_changed)
-        self.symbols_switch.toggled.connect(self._on_brute_force_option_changed)
+        self.numbers_switch.checkedChanged.connect(self._on_brute_force_option_changed)
+        self.letters_switch.checkedChanged.connect(self._on_brute_force_option_changed)
+        self.symbols_switch.checkedChanged.connect(self._on_brute_force_option_changed)
         self.length_slider.valueChanged.connect(self._on_brute_force_option_changed)
 
     def _on_slider_changed(self, value):
