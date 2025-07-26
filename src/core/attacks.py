@@ -73,6 +73,7 @@ class DictionaryAttack(Attack):
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import time
+import sys
 
 
 class BruteForceAttack(Attack):
@@ -136,9 +137,9 @@ class BruteForceAttack(Attack):
 
         self.total_attempts += 1
         if self.total_attempts % 1000 == 0:
-            self.progress.emit(
-                f"Trying password: {password} (Attempts: {self.total_attempts})"
-            )
+            # Log progress to the console, overwriting the previous line
+            sys.stdout.write(f"\rTrying password: {password} (Attempts: {self.total_attempts})")
+            sys.stdout.flush()
 
         if self.try_password(password):
             self.stop_event.set()
