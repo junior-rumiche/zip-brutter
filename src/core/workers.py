@@ -66,5 +66,3 @@ class AttackWorker(QObject):
 
         except Exception as e:
             self.error.emit(f"Error during attack: {str(e)}")
-        finally:
-            self.stop()
