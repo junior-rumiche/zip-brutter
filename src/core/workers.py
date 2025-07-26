@@ -23,6 +23,7 @@ class AttackWorker(QObject):
         symbols=False,
         length=4,
         parent=None,
+        **kwargs,
     ):
         super(AttackWorker, self).__init__(parent)
         self.running = True
@@ -30,8 +31,9 @@ class AttackWorker(QObject):
         if dict_path:
             self.attack = DictionaryAttack(file_path, dict_path, parent=self)
         else:
+        max_workers = kwargs.get("max_workers", 10)
             self.attack = BruteForceAttack(
-                file_path, length, numbers, letters, symbols, parent=self
+            file_path, length, numbers, letters, symbols, parent=self, max_workers=max_workers
             )
         self.attack.progress.connect(self.progress)
 

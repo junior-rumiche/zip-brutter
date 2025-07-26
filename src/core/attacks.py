@@ -52,19 +52,21 @@ class DictionaryAttack(Attack):
     def __init__(self, file_path, dict_path, parent=None):
         super().__init__(file_path, parent)
         self.dict_path = dict_path
+        self.total_passwords = 0
 
     def run(self):
-        total_attempts = 0
         with open(self.dict_path, "r", encoding="utf-8", errors="ignore") as password_file:
-            for password in password_file:
+            self.total_passwords = sum(1 for line in password_file)
+            password_file.seek(0)
+
+            for i, password in enumerate(password_file):
                 if not self.running:
                     return None
                 password = password.strip()
-                total_attempts += 1
-                if total_attempts % 10 == 0:
-                    self.progress.emit(
-                        f"Trying password: {password} (Attempts: {total_attempts})"
-                    )
+                progress_percentage = int((i + 1) / self.total_passwords * 100)
+                self.progress.emit(
+                    f"Trying password: {password} ({i + 1}/{self.total_passwords}) - {progress_percentage}%"
+                )
                 if self.try_password(password):
                     return password
         return None
@@ -90,9 +92,10 @@ class BruteForceAttack(Attack):
         password_found (str): The correct password, if found.
         stop_event (threading.Event): An event to signal all threads to stop.
         total_attempts (int): A counter for the number of passwords tried.
+        max_workers (int): The number of threads to use for the attack.
     """
 
-    def __init__(self, file_path, length, numbers, letters, symbols, parent=None):
+    def __init__(self, file_path, length, numbers, letters, symbols, parent=None, max_workers=10):
         super().__init__(file_path, parent)
         self.length = length
         self.numbers = numbers
@@ -101,6 +104,7 @@ class BruteForceAttack(Attack):
         self.password_found = None
         self.stop_event = threading.Event()
         self.total_attempts = 0
+        self.max_workers = max_workers
 
     def __get_combinations(self):
         """
@@ -137,7 +141,7 @@ class BruteForceAttack(Attack):
         self.total_attempts += 1
         if self.total_attempts % 1000 == 0:
             self.progress.emit(
-                f"Trying password: {password} (Attempts: {self.total_attempts})"
+                f"Trying: {password} | Attempts: {self.total_attempts} | Threads: {self.max_workers}"
             )
 
         if self.try_password(password):
@@ -147,7 +151,7 @@ class BruteForceAttack(Attack):
 
     def run(self):
         combinations = self.__get_combinations()
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for length in range(1, self.length + 1):
                 if self.stop_event.is_set():
                     break

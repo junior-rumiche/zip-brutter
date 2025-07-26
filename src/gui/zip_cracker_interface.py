@@ -13,8 +13,9 @@ from qfluentwidgets import (
     BodyLabel,
     TransparentPushButton,
     SwitchButton,
-    IndeterminateProgressBar,
+    ProgressBar,
     StrongBodyLabel,
+    SpinBox,
 )
 from src.core.workers import AttackWorker
 from src.widgets.modern_card import ModernCardWidget
@@ -183,7 +184,9 @@ class ZipCrackerInterface(QWidget):
         switches_layout.addStretch()
         options_layout.addLayout(switches_layout)
 
-        # Password length slider
+        # Password length slider and threads
+        config_layout = QHBoxLayout()
+
         slider_layout = QVBoxLayout()
         slider_header = QHBoxLayout()
         slider_label = StrongBodyLabel("Password Length:", self)
@@ -196,8 +199,19 @@ class ZipCrackerInterface(QWidget):
         self.length_slider.setRange(1, 20)
         self.length_slider.setValue(4)
         slider_layout.addWidget(self.length_slider)
+        config_layout.addLayout(slider_layout)
 
-        options_layout.addLayout(slider_layout)
+        threads_layout = QVBoxLayout()
+        threads_label = StrongBodyLabel("Threads:", self)
+        threads_layout.addWidget(threads_label)
+
+        self.threads_spinbox = SpinBox(self)
+        self.threads_spinbox.setRange(1, 128)
+        self.threads_spinbox.setValue(10)
+        threads_layout.addWidget(self.threads_spinbox)
+        config_layout.addLayout(threads_layout)
+
+        options_layout.addLayout(config_layout)
         layout.addWidget(options_card)
 
         # Start Attack button and progress
@@ -218,7 +232,7 @@ class ZipCrackerInterface(QWidget):
         buttons_layout.addWidget(self.start_btn, alignment=Qt.AlignCenter)
         buttons_layout.addWidget(self.stop_btn, alignment=Qt.AlignCenter)
 
-        self.progress_bar = IndeterminateProgressBar(self)
+        self.progress_bar = ProgressBar(self)
         self.progress_bar.setVisible(False)
 
         action_layout.addLayout(buttons_layout)
@@ -326,32 +340,29 @@ class ZipCrackerInterface(QWidget):
         symbols = self.symbols_switch.isChecked()
         length = self.length_slider.value()
 
+        threads = self.threads_spinbox.value()
         self.worker = AttackWorker(
-            zip_path, dict_path, numbers, letters, symbols, length
+            zip_path, dict_path, numbers, letters, symbols, length, max_workers=threads
         )
         self.worker.finished.connect(self.worker_finished)
         self.worker.progress.connect(self.worker_progress)
         self.worker.error.connect(self.worker_error)
         self.worker.start()
         self.progress_bar.setVisible(True)
-        self.progress_bar.start()
+        if self.dict_path.text():
+            self.progress_bar.setRange(0, 100)
+        else:
+            self.progress_bar.setRange(0, 0) # Indeterminate
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
 
     def stop_attack(self):
         """
         Stops the ongoing password cracking attack.
-
-        This method stops the AttackWorker if it is running, resets the
-        worker instance to None, stops and hides the progress bar, and
-        updates the UI to enable the start button and disable the stop
-        button. A message indicating the attack was stopped by the user
-        is displayed in the output text area.
         """
         if self.worker:
             self.worker.stop()
             self.worker = None
-            self.progress_bar.stop()
             self.progress_bar.setVisible(False)
             self.start_btn.setEnabled(True)
             self.stop_btn.setEnabled(False)
@@ -360,17 +371,7 @@ class ZipCrackerInterface(QWidget):
     def worker_finished(self, message):
         """
         Handles the completion of the password cracking attack.
-
-        This method is called when the AttackWorker emits the 'finished' signal.
-        It stops and hides the progress bar, updates the output text with the
-        provided message, enables the start button, and disables the stop button.
-        If there is an active worker, it stops and resets it.
-
-        Additionally, it displays a dialog with the result message.
-
-        :param message: The result message to display in the output text and dialog.
         """
-        self.progress_bar.stop()
         self.progress_bar.setVisible(False)
         self.output_text.setText(message)
         self.start_btn.setEnabled(True)
@@ -384,27 +385,22 @@ class ZipCrackerInterface(QWidget):
 
     def worker_progress(self, message):
         """
-        Updates the output text with the latest progress message from the AttackWorker.
-
-        This method is called when the AttackWorker emits the 'progress' signal.
-        It sets the text of the output text area to the provided message.
-
-        :param message: The progress message to display in the output text.
+        Updates the output text and progress bar with the latest progress.
         """
         self.output_text.setText(message)
+        if self.dict_path.text() and "%" in message:
+            try:
+                # Extract percentage from a message like "Trying... (x/y) - 85%"
+                percentage_str = message.split('%')[0].split()[-1]
+                percentage = int(percentage_str)
+                self.progress_bar.setValue(percentage)
+            except (ValueError, IndexError):
+                pass # Ignore if parsing fails
 
     def worker_error(self, message):
         """
         Handles errors that occur during the password cracking attack.
-
-        This method is called when the AttackWorker emits the 'error' signal.
-        It stops and hides the progress bar, updates the output text with the
-        provided error message, enables the start button, and disables the stop
-        button. If there is an active worker, it stops and resets it.
-
-        :param message: The error message to display in the output text.
         """
-        self.progress_bar.stop()
         self.progress_bar.setVisible(False)
         self.output_text.setText(f"Error: {message}")
         self.start_btn.setEnabled(True)
