@@ -246,9 +246,25 @@ class ZipCrackerInterface(QWidget):
         self.start_btn.clicked.connect(self.start_attack)
         self.stop_btn.clicked.connect(self.stop_attack)
         self.length_slider.valueChanged.connect(self._on_slider_changed)
+        self.dict_path.textChanged.connect(self._on_dict_path_changed)
+        self.numbers_switch.toggled.connect(self._on_brute_force_option_changed)
+        self.letters_switch.toggled.connect(self._on_brute_force_option_changed)
+        self.symbols_switch.toggled.connect(self._on_brute_force_option_changed)
+        self.length_slider.valueChanged.connect(self._on_brute_force_option_changed)
 
     def _on_slider_changed(self, value):
         self.length_value.setText(str(value))
+
+    def _on_dict_path_changed(self, text):
+        is_dict_selected = bool(text)
+        self.numbers_switch.setEnabled(not is_dict_selected)
+        self.letters_switch.setEnabled(not is_dict_selected)
+        self.symbols_switch.setEnabled(not is_dict_selected)
+        self.length_slider.setEnabled(not is_dict_selected)
+
+    def _on_brute_force_option_changed(self):
+        if self.dict_path.text():
+            self.dict_path.clear()
 
     def pick_zip_file(self):
         """
